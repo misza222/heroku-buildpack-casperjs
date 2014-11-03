@@ -2,29 +2,38 @@
 
 set -e
 
+# dirs
+BIN_DIR=$(cd $(dirname $0); pwd) # absolute path
 BUILD_DIR=$1
 CACHE_DIR=$2
 
 # config
-VERSION="1.8.1"
-S3_BUCKET="stomita-buildpack-phantomjs"
+VERSION="1.9.8"
 
-# s3 packages
-FILE_NAME="buildpack-phantomjs-${VERSION}.tar.gz"
-BUILDPACK_PHANTOMJS_PACKAGE="http://${S3_BUCKET}.s3.amazonaws.com/${FILE_NAME}"
+# Buildpack URL
+ARCHIVE_NAME=phantomjs-${VERSION}-linux-x86_64
+FILE_NAME=${ARCHIVE_NAME}.tar.bz2
+# BUILDPACK_PHANTOMJS_PACKAGE=https://phantomjs.googlecode.com/files/${FILE_NAME}
+BUILDPACK_PHANTOMJS_PACKAGE=http://bitbucket.org/ariya/phantomjs/downloads/${FILE_NAME}
 
 mkdir -p $CACHE_DIR
 if ! [ -e $CACHE_DIR/$FILE_NAME ]; then
-  echo "-----> Fetching PhantomJS buildpack binaries"
-  curl $BUILDPACK_PHANTOMJS_PACKAGE -s -o $CACHE_DIR/$FILE_NAME
+  echo "-----> Fetching PhantomJS ${VERSION} binaries at ${BUILDPACK_PHANTOMJS_PACKAGE}"
+  curl -L $BUILDPACK_PHANTOMJS_PACKAGE -s -o $CACHE_DIR/$FILE_NAME
+  echo "-----> Stored in ${CACHE_DIR}/${FILE_NAME}"
 fi
 
-echo "-----> Extracting PhantomJS binaries" 
-mkdir -p $BUILD_DIR/vendor/phantomjs
-tar zxf $CACHE_DIR/$FILE_NAME -C $BUILD_DIR/vendor/phantomjs
+echo "-----> Extracting PhantomJS ${VERSION} binaries to ${BUILD_DIR}/vendor/phantomjs"
+mkdir -p $CACHE_DIR/$ARCHIVE_NAME
+mkdir -p $BUILD_DIR/vendor
+tar -xjf $CACHE_DIR/$FILE_NAME -C $CACHE_DIR
+mv $CACHE_DIR/$ARCHIVE_NAME $BUILD_DIR/vendor/phantomjs
 
-
-echo "-----> Cloning casperjs"
-
-cd $BUILD_DIR/vendor
+echo "-----> Cloning CasperJS"
+cd ${BUILD_DIR}/vendor
 git clone git://github.com/n1k0/casperjs.git
+
+echo "-----> Installing .profile.d/casperjs.sh"
+cd ${BUILD_DIR}
+mkdir -p .profile.d
+cp ${BIN_DIR}/casperjs.sh .profile.d/
